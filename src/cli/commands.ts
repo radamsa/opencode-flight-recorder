@@ -4,6 +4,16 @@ import { StorageReader } from "../storage/StorageReader.js"
 import type { Exchange } from "../types/index.js"
 import { generateHtmlReport } from "../report/template.js"
 
+function fmtDate(iso: string): string {
+  const d = new Date(iso)
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  const h = String(d.getHours()).padStart(2, "0")
+  const mi = String(d.getMinutes()).padStart(2, "0")
+  return `${y}-${mo}-${dd} ${h}:${mi}`
+}
+
 export function listSessions(reader: StorageReader): void {
   const sessions = reader.listSessions()
   if (sessions.length === 0) {
@@ -11,13 +21,7 @@ export function listSessions(reader: StorageReader): void {
     return
   }
   for (const s of sessions) {
-    const d = new Date(s.createdAt)
-    const y = d.getFullYear()
-    const mo = String(d.getMonth() + 1).padStart(2, "0")
-    const day = String(d.getDate()).padStart(2, "0")
-    const h = String(d.getHours()).padStart(2, "0")
-    const mi = String(d.getMinutes()).padStart(2, "0")
-    const date = `${y}-${mo}-${day} ${h}:${mi}`
+    const date = fmtDate(s.createdAt)
     const id = s.id.length > 8 ? s.id.slice(0, 8) : s.id
     const excLabel = s.exchangeCount === 1 ? "exchange" : "exchanges"
     console.log(`  ${id}  ${date}  ${s.exchangeCount} ${excLabel}  ${s.cwd}`)
@@ -34,8 +38,8 @@ export function showSession(reader: StorageReader, sessionId: string): void {
 
   console.log(`Session: ${session.id}`)
   console.log("─".repeat(80))
-  console.log(`  Created:   ${new Date(session.createdAt).toLocaleString()}`)
-  console.log(`  Ended:     ${session.endedAt ? new Date(session.endedAt).toLocaleString() : "active"}`)
+  console.log(`  Created:   ${fmtDate(session.createdAt)}`)
+  console.log(`  Ended:     ${session.endedAt ? fmtDate(session.endedAt) : "active"}`)
   console.log(`  CWD:       ${session.cwd}`)
   console.log(`  Git:       ${session.gitBranch ?? "-"} @ ${(session.gitCommit ?? "-").slice(0, 7)}`)
   console.log(`  Hostname:  ${session.hostname ?? "-"}`)
@@ -49,7 +53,7 @@ export function showSession(reader: StorageReader, sessionId: string): void {
 
 function printExchange(exc: Exchange): void {
   console.log(`  [${exc.id}] ${exc.provider}/${exc.model}`)
-  console.log(`    start: ${new Date(exc.timestampStart).toLocaleString()}`)
+  console.log(`    start: ${fmtDate(exc.timestampStart)}`)
   if (exc.latencyMs != null) console.log(`    latency: ${exc.latencyMs}ms`)
   if (exc.usage) {
     console.log(`    tokens: ${exc.usage.totalTokens ?? "?"} (prompt: ${exc.usage.promptTokens}, completion: ${exc.usage.completionTokens})`)
