@@ -7,7 +7,14 @@ const sessionMeta = new Map<string, { provider: string; model: string }>()
 
 export const flightRecorderPlugin: Plugin = async ({ client, project, $, directory, worktree }) => {
   const sessionManager = new SessionManager()
-  await sessionManager.start()
+  let started = false
+
+  async function ensureStart(sessionId: string): Promise<void> {
+    if (!started) {
+      started = true
+      await sessionManager.start(sessionId)
+    }
+  }
 
   return {
     dispose: async () => {
@@ -44,6 +51,7 @@ export const flightRecorderPlugin: Plugin = async ({ client, project, $, directo
         const completed = !!(msg.time as Record<string, unknown> | undefined)?.completed
 
         if (role === "user" && !idMap.has(msg.id as string)) {
+          await ensureStart(msg.sessionID as string)
           idMap.set(msg.id as string, msg.id as string)
           const text = partTexts.get(msg.id as string) || ""
           const fallback = sessionMeta.get(msg.sessionID as string) ?? { provider: "unknown", model: "unknown" }
@@ -78,6 +86,7 @@ export const flightRecorderPlugin: Plugin = async ({ client, project, $, directo
     },
 
     "chat.params": async (input, output) => {
+      await ensureStart(input.sessionID)
       sessionManager.onChatParams(input.sessionID, {
         temperature: output.temperature,
         maxTokens: output.maxOutputTokens,

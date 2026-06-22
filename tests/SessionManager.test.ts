@@ -17,24 +17,20 @@ describe("SessionManager", () => {
   })
 
   it("creates session with metadata on start", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session-id")
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, sm.sessionId)
+    const sessionDir = join(baseDir, ...dtPath(), "test-session-id")
 
     expect(existsSync(join(sessionDir, "session.json"))).toBe(true)
     const session = JSON.parse(readFileSync(join(sessionDir, "session.json"), "utf-8"))
-    expect(session.id).toBe(sm.sessionId)
+    expect(session.id).toBe("test-session-id")
     expect(session.cwd).toBeDefined()
   })
 
   it("tracks exchange count across messages", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session")
 
     sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
       { type: "text", text: "hello" },
@@ -53,22 +49,18 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, sm.sessionId)
+    const dir = join(baseDir, ...dtPath(), "test-session")
 
-    const lines = readFileSync(join(sessionDir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(3)
 
-    const session = JSON.parse(readFileSync(join(sessionDir, "session.json"), "utf-8"))
+    const session = JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"))
     expect(session.exchangeCount).toBe(3)
   })
 
   it("captures model parameters via onChatParams", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session")
 
     sm.onChatParams(sm.sessionId, { temperature: 0.7, maxTokens: 4096, topP: 0.9 })
     sm.onChatMessage("msg-1", sm.sessionId, "openai", "gpt-4", [
@@ -78,13 +70,9 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, sm.sessionId)
+    const dir = join(baseDir, ...dtPath(), "test-session")
 
-    const lines = readFileSync(join(sessionDir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     const exchange = JSON.parse(lines[0])
     expect(exchange.request.temperature).toBe(0.7)
     expect(exchange.request.maxTokens).toBe(4096)
@@ -92,8 +80,8 @@ describe("SessionManager", () => {
   })
 
   it("flushes pending exchanges on end", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session")
 
     sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
       { type: "text", text: "hello" },
@@ -106,19 +94,15 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, sm.sessionId)
+    const dir = join(baseDir, ...dtPath(), "test-session")
 
-    const lines = readFileSync(join(sessionDir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(2)
   })
 
   it("tracks tool calls linked to exchanges", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session")
 
     sm.onChatParams(sm.sessionId, { temperature: 0, maxTokens: 2000, topP: 1 })
     sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
@@ -132,7 +116,7 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const dir = sessionDirFn(baseDir, sm.sessionId)
+    const dir = join(baseDir, ...dtPath(), "test-session")
     const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(1)
 
@@ -143,8 +127,8 @@ describe("SessionManager", () => {
   })
 
   it("builds conversation lineage with parentId and rootId", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session")
 
     sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
       { type: "text", text: "first message" },
@@ -163,7 +147,7 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const dir = sessionDirFn(baseDir, sm.sessionId)
+    const dir = join(baseDir, ...dtPath(), "test-session")
     const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(3)
 
@@ -184,8 +168,8 @@ describe("SessionManager", () => {
   })
 
   it("captures tool arguments from before hook", async () => {
-    const sm = new SessionManager(undefined, baseDir)
-    await sm.start()
+    const sm = new SessionManager(baseDir)
+    await sm.start("test-session")
 
     sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
       { type: "text", text: "read file" },
@@ -198,19 +182,48 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const dir = sessionDirFn(baseDir, sm.sessionId)
+    const dir = join(baseDir, ...dtPath(), "test-session")
     const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     const exchange = JSON.parse(lines[0])
     expect(exchange.tools).toHaveLength(1)
     expect(exchange.tools[0].arguments).toEqual({ filePath: "/tmp/test.txt" })
     expect(exchange.tools[0].result).toBe("file content")
   })
+
+  it("restores existing session on re-init with same id", async () => {
+    const sm1 = new SessionManager(baseDir)
+    await sm1.start("restore-session")
+    sm1.onChatMessage("msg-1", sm1.sessionId, "openai", "gpt-4", [
+      { type: "text", text: "hello" },
+    ])
+    sm1.onChatResponse("msg-1", "world", "stop")
+    await sm1.end()
+
+    // simulate new opencode process, same session ID
+    const sm2 = new SessionManager(baseDir)
+    await sm2.start("restore-session")
+    expect(sm2.sessionId).toBe("restore-session")
+    sm2.onChatMessage("msg-2", sm2.sessionId, "openai", "gpt-4", [
+      { type: "text", text: "again" },
+    ])
+    sm2.onChatResponse("msg-2", "hello again", "stop")
+    await sm2.end()
+
+    const dir = join(baseDir, ...dtPath(), "restore-session")
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    expect(lines).toHaveLength(2)
+
+    const session = JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"))
+    expect(session.exchangeCount).toBe(2)
+    expect(session.createdAt).toBeDefined()
+  })
 })
 
-function sessionDirFn(baseDir: string, sessionId: string): string {
+function dtPath(): string[] {
   const now = new Date()
-  const yyyy = String(now.getFullYear())
-  const mm = String(now.getMonth() + 1).padStart(2, "0")
-  const dd = String(now.getDate()).padStart(2, "0")
-  return join(baseDir, yyyy, mm, dd, sessionId)
+  return [
+    String(now.getFullYear()),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ]
 }

@@ -28,23 +28,35 @@ export class JsonlWriter {
     this.exchangePath = join(this.sessionDir, "exchanges.jsonl")
     this.semanticPath = join(this.sessionDir, "semantic.jsonl")
     this.closed = false
-    this.exchangeCount = 0
     this.flushCounter = 0
 
     await mkdir(this.sessionDir, { recursive: true })
 
-    const session: Session = {
-      id: sessionId,
-      createdAt: now.toISOString(),
-      cwd: meta.cwd ?? "",
-      gitBranch: meta.gitBranch,
-      gitCommit: meta.gitCommit,
-      hostname: meta.hostname,
-      os: meta.os,
-      exchangeCount: 0,
+    const sessionPath = join(this.sessionDir, "session.json")
+    let session: Session
+    try {
+      const raw = await readFile(sessionPath, "utf-8")
+      session = JSON.parse(raw) as Session
+      session.cwd = meta.cwd ?? session.cwd
+      session.gitBranch = meta.gitBranch ?? session.gitBranch
+      session.gitCommit = meta.gitCommit ?? session.gitCommit
+      session.hostname = meta.hostname ?? session.hostname
+      session.os = meta.os ?? session.os
+      delete (session as any).endedAt
+      this.exchangeCount = session.exchangeCount
+    } catch {
+      session = {
+        id: sessionId,
+        createdAt: now.toISOString(),
+        cwd: meta.cwd ?? "",
+        gitBranch: meta.gitBranch,
+        gitCommit: meta.gitCommit,
+        hostname: meta.hostname,
+        os: meta.os,
+        exchangeCount: 0,
+      }
     }
-
-    await writeFile(join(this.sessionDir, "session.json"), JSON.stringify(session, null, 2))
+    await writeFile(sessionPath, JSON.stringify(session, null, 2))
   }
 
   async appendExchange(exchange: Exchange): Promise<void> {

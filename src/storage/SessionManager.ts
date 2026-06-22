@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto"
 import { execSync } from "node:child_process"
 import { hostname, platform } from "node:os"
 import { cwd } from "node:process"
@@ -7,8 +6,9 @@ import { ExchangeBuilder } from "../capture/ExchangeBuilder.js"
 import type { Exchange, ToolEvent } from "../types/index.js"
 
 export class SessionManager {
-  public sessionId: string
+  public sessionId: string = ""
   private writer: JsonlWriter
+  private started: boolean = false
   private requestIdToExchange: Map<string, string> = new Map()
   private exchangeBuilders: Map<string, ExchangeBuilder> = new Map()
   private pendingToolCalls: Map<string, { exchangeId: string; toolCallId: string }> = new Map()
@@ -17,12 +17,14 @@ export class SessionManager {
   private rootExchangeId: string | undefined
   private lastExchangeId: string | undefined
 
-  constructor(sessionId?: string, baseDir?: string) {
-    this.sessionId = sessionId ?? randomUUID()
+  constructor(baseDir?: string) {
     this.writer = new JsonlWriter(baseDir)
   }
 
-  async start(): Promise<void> {
+  async start(sessionId: string): Promise<void> {
+    if (this.started) return
+    this.started = true
+    this.sessionId = sessionId
     const meta = {
       cwd: cwd(),
       gitBranch: this.getGitBranch(),
@@ -30,7 +32,7 @@ export class SessionManager {
       hostname: hostname(),
       os: platform(),
     }
-    await this.writer.init(this.sessionId, meta)
+    await this.writer.init(sessionId, meta)
   }
 
   onChatMessage(
@@ -122,6 +124,7 @@ export class SessionManager {
   }
 
   async end(): Promise<void> {
+    if (!this.started) return
     for (const builder of this.exchangeBuilders.values()) {
       const exchange = builder.build()
       await this.writer.appendExchange(exchange)
