@@ -84,17 +84,27 @@ OpenCode automatically loads `.js`/`.ts` files from `~/.config/opencode/plugins/
 The package includes a standalone CLI for reading recorded data:
 
 ```bash
-# List all sessions
+# List all sessions (one line each)
 npm run flight session list
 
-# Show a specific session (with all exchanges)
+# Show a specific session with all exchanges
 npm run flight session show <session-id>
 
-# Aggregate statistics
+# Generate HTML usage report (all time, or by date)
+npm run flight report              # all time
+npm run flight report 2026         # year 2026
+npm run flight report 2026-06      # June 2026
+npm run flight report 2026-06-22   # single day
+
+# Aggregate statistics (terminal)
 npm run flight stats
 
 # Full-text search across all exchanges
 npm run flight search "error message"
+
+# Clear recorded history
+npm run flight clear               # all sessions (with confirmation)
+npm run flight clear 2026          # only sessions from 2026
 
 # Export all data as JSON
 npm run flight export
@@ -109,6 +119,8 @@ If installed globally (`npm link` or via npm), use `flight` directly:
 flight session list
 flight stats
 flight search "database migration"
+flight report
+flight clear 2026-01
 ```
 
 ## Data Model
