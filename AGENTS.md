@@ -63,6 +63,12 @@ src/
 - **Entry file** (`flight-recorder.js`) is a writable bridge — must stay in sync with `src/plugin/index.ts`
 - Plugin auto-loaded from `~/.config/opencode/plugins/` — no `plugin` array entry needed
 
+## CLI & npm
+
+- **npm intercepts `--` flags** — `--json`, `--force`, `--yaml` and short flags like `-j` are consumed by `npm run` before reaching the script
+- **Workaround:** use positional subcommands instead of flags (e.g. `search json <query>`), or use `--` separator: `npm run flight -- search --json README.md`
+- **Rule:** never add `--` prefixed flags to CLI commands — use subcommands like `json`, `yaml`, `force` as positional args
+
 ## Git
 
 - Commit after each completed task
