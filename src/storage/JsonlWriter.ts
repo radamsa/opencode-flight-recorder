@@ -53,7 +53,19 @@ export class JsonlWriter {
       await appendFile(this.exchangePath, JSON.stringify(exchange) + "\n")
       this.exchangeCount++
       this.flushCounter++
-    } catch (err) {
+    } catch (err: unknown) {
+      const e = err as NodeJS.ErrnoException
+      if (e.code === "ENOENT") {
+        try {
+          await mkdir(this.sessionDir, { recursive: true })
+          await appendFile(this.exchangePath, JSON.stringify(exchange) + "\n")
+          this.exchangeCount++
+          this.flushCounter++
+          return
+        } catch {
+          // fall through to error log
+        }
+      }
       console.error("[FlightRecorder] Failed to write exchange:", err)
     }
   }
@@ -62,9 +74,16 @@ export class JsonlWriter {
     if (this.closed) return
     this.closed = true
     try {
+      // ensure directory exists (may have been deleted by clear)
+      await mkdir(this.sessionDir, { recursive: true })
       const sessionPath = join(this.sessionDir, "session.json")
-      const raw = await readFile(sessionPath, "utf-8")
-      const session = JSON.parse(raw) as Session
+      let session: Session
+      try {
+        const raw = await readFile(sessionPath, "utf-8")
+        session = JSON.parse(raw) as Session
+      } catch {
+        session = { id: "", createdAt: new Date().toISOString(), cwd: "", exchangeCount: 0 }
+      }
       session.endedAt = new Date().toISOString()
       session.exchangeCount = this.exchangeCount
       await writeFile(sessionPath, JSON.stringify(session, null, 2))
