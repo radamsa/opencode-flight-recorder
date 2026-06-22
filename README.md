@@ -115,6 +115,8 @@ flight search "database migration"
 
 ### Exchange
 
+One request-response cycle with the LLM. Each time OpenCode sends a prompt to the model and receives a response (possibly with tool calls in between), that is one exchange. The exchange count per session is shown in `flight session list`.
+
 ```typescript
 interface Exchange {
   id: string
