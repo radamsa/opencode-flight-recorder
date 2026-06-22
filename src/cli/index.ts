@@ -17,24 +17,14 @@ Commands:
   search <query>              Search exchanges by text
   export [sessionId]          Export data as JSON
   help                        Show this help
-
-Options:
-  --force                     Skip confirmation prompt
 `)
 }
 
 async function main(): Promise<void> {
-  let args = process.argv.slice(2)
+  const args = process.argv.slice(2)
   if (args.length === 0) {
     help()
     return
-  }
-
-  let forceFlag = false
-  const flagIndex = args.indexOf("--force")
-  if (flagIndex !== -1) {
-    forceFlag = true
-    args = args.filter((a) => a !== "--force")
   }
 
   const [cmd, sub, ...rest] = args
@@ -56,7 +46,7 @@ async function main(): Promise<void> {
       break
 
     case "clear":
-      clearHistory(reader, sub || "all", forceFlag)
+      await clearHistory(reader, sub || "all")
       break
 
     case "stats":

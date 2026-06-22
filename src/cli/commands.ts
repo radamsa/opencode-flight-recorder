@@ -1,3 +1,4 @@
+import { createInterface } from "node:readline"
 import { StorageReader } from "../storage/StorageReader.js"
 import type { Exchange } from "../types/index.js"
 
@@ -121,7 +122,7 @@ export function searchExchanges(reader: StorageReader, query: string): void {
   }
 }
 
-export function clearHistory(reader: StorageReader, spec: string, force: boolean): void {
+export async function clearHistory(reader: StorageReader, spec: string): Promise<void> {
   const target = reader.resolveSpecTarget(spec)
   if (!target) {
     console.log(`Invalid spec "${spec}". Use all, YYYY, YYYY-MM, or YYYY-MM-DD.`)
@@ -134,9 +135,14 @@ export function clearHistory(reader: StorageReader, spec: string, force: boolean
     return
   }
 
-  if (!force) {
-    console.log(`This will delete ${preview} session(s).`)
-    console.log("Use --force to confirm: flight clear --force " + spec)
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  const answer = await new Promise<string>((resolve) => {
+    rl.question(`Delete ${preview} session(s)? (y/N) `, resolve)
+  })
+  rl.close()
+
+  if (answer.toLowerCase() !== "y") {
+    console.log("Cancelled.")
     return
   }
 
