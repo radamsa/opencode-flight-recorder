@@ -67,6 +67,15 @@ export class ExchangeBuilder {
     return this
   }
 
+  updateToolEvent(callId: string, updates: Partial<ToolEvent>): this {
+    if (!this.exchange.tools) return this
+    const tool = this.exchange.tools.find(t => t.callId === callId)
+    if (tool) {
+      Object.assign(tool, updates)
+    }
+    return this
+  }
+
   build(): Exchange {
     return { ...this.exchange }
   }

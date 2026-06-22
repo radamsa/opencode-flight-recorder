@@ -15,9 +15,9 @@ export class SessionManager {
   private paramsStore: Map<string, { temperature?: number; maxTokens?: number; topP?: number }> = new Map()
   private exchangeCount: number = 0
 
-  constructor() {
-    this.sessionId = randomUUID()
-    this.writer = new JsonlWriter()
+  constructor(sessionId?: string, baseDir?: string) {
+    this.sessionId = sessionId ?? randomUUID()
+    this.writer = new JsonlWriter(baseDir)
   }
 
   async start(): Promise<void> {
@@ -103,14 +103,7 @@ export class SessionManager {
     const builder = this.exchangeBuilders.get(pending.exchangeId)
     if (!builder) return
 
-    builder.addToolEvent({
-      callId: callID,
-      name: "",
-      arguments: {},
-      result,
-      durationMs,
-      timestamp: new Date().toISOString(),
-    })
+    builder.updateToolEvent(callID, { result, durationMs })
 
     this.pendingToolCalls.delete(callID)
   }
