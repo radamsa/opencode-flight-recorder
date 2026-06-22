@@ -1,19 +1,24 @@
 {
   "name": "opencode-flight-recorder",
   "version": "0.1.0",
+"type": "module",
   "description": "OpenCode Flight Recorder — captures, structures, and stores all LLM interactions",
   "main": "dist/plugin/index.js",
   "types": "dist/plugin/index.d.ts",
   "files": [
     "dist"
   ],
+  "bin": {
+    "flight": "dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "flight": "node dist/cli/index.js"
   },
   "keywords": [
     "opencode",
