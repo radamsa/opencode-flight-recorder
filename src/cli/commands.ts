@@ -7,15 +7,17 @@ export function listSessions(reader: StorageReader): void {
     console.log("No sessions found.")
     return
   }
-  console.log("Sessions:")
-  console.log("─".repeat(80))
   for (const s of sessions) {
-    const date = new Date(s.createdAt).toLocaleString()
-    const end = s.endedAt ? new Date(s.endedAt).toLocaleString() : "active"
-    console.log(`  ${s.id}`)
-    console.log(`    created: ${date}  |  ended: ${end}  |  exchanges: ${s.exchangeCount}`)
-    console.log(`    cwd: ${s.cwd}  |  git: ${s.gitBranch ?? "-"} @ ${(s.gitCommit ?? "-").slice(0, 7)}`)
-    console.log()
+    const d = new Date(s.createdAt)
+    const y = d.getFullYear()
+    const mo = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    const h = String(d.getHours()).padStart(2, "0")
+    const mi = String(d.getMinutes()).padStart(2, "0")
+    const date = `${y}-${mo}-${day} ${h}:${mi}`
+    const id = s.id.length > 8 ? s.id.slice(0, 8) : s.id
+    const excLabel = s.exchangeCount === 1 ? "exchange" : "exchanges"
+    console.log(`  ${id}  ${date}  ${s.exchangeCount} ${excLabel}  ${s.cwd}`)
   }
 }
 
