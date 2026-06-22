@@ -3,9 +3,14 @@ import { join } from "node:path"
 import { homedir } from "node:os"
 import type { Exchange, Session } from "../types/index.js"
 
-const BASE_DIR = join(homedir(), ".opencode-flight-recorder", "sessions")
+const DEFAULT_BASE = join(homedir(), ".opencode-flight-recorder", "sessions")
 
 export class JsonlWriter {
+  private baseDir: string
+
+  constructor(baseDir?: string) {
+    this.baseDir = baseDir ?? DEFAULT_BASE
+  }
   private sessionDir: string = ""
   private exchangePath: string = ""
   private exchangeCount: number = 0
@@ -16,7 +21,7 @@ export class JsonlWriter {
     const yyyy = String(now.getFullYear())
     const mm = String(now.getMonth() + 1).padStart(2, "0")
     const dd = String(now.getDate()).padStart(2, "0")
-    this.sessionDir = join(BASE_DIR, yyyy, mm, dd, sessionId)
+    this.sessionDir = join(this.baseDir, yyyy, mm, dd, sessionId)
     this.exchangePath = join(this.sessionDir, "exchanges.jsonl")
     this.closed = false
 

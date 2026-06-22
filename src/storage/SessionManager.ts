@@ -5,7 +5,6 @@ import { cwd } from "node:process"
 import { JsonlWriter } from "./JsonlWriter.js"
 import { ExchangeBuilder } from "../capture/ExchangeBuilder.js"
 import type { Exchange, ToolEvent } from "../types/index.js"
-import type { Part } from "@opencode-ai/sdk"
 
 export class SessionManager {
   public sessionId: string
@@ -13,6 +12,7 @@ export class SessionManager {
   private requestIdToExchange: Map<string, string> = new Map()
   private exchangeBuilders: Map<string, ExchangeBuilder> = new Map()
   private pendingToolCalls: Map<string, { exchangeId: string; toolCallId: string }> = new Map()
+  private paramsStore: Map<string, { temperature?: number; maxTokens?: number; topP?: number }> = new Map()
   private exchangeCount: number = 0
 
   constructor() {
@@ -36,29 +36,44 @@ export class SessionManager {
     sessionID: string,
     provider: string,
     model: string,
-    parts: Part[],
+    parts: { type: string; text?: string }[],
   ): void {
     const builder = new ExchangeBuilder(sessionID)
-    builder
-      .setProvider(provider)
-      .setModel(model)
-      .setRequest({
-        messages: parts.map(p => ({ type: p.type, text: p.type === "text" ? (p as any).text : "" })),
-      })
+    builder.setProvider(provider).setModel(model)
+
+    const params = this.paramsStore.get(sessionID)
+    builder.setRequest({
+      messages: parts.map(p => ({ type: p.type, text: p.type === "text" ? (p.text ?? "") : "" })),
+      temperature: params?.temperature,
+      maxTokens: params?.maxTokens,
+      topP: params?.topP,
+    })
 
     this.requestIdToExchange.set(messageID, builder.build().id)
     this.exchangeBuilders.set(messageID, builder)
+  }
+
+  onChatParams(sessionID: string, params: { temperature: number; maxTokens?: number; topP: number }): void {
+    this.paramsStore.set(sessionID, params)
   }
 
   onChatResponse(
     messageID: string,
     text: string,
     finishReason?: string,
+    usage?: { promptTokens?: number; completionTokens?: number; cachedTokens?: number },
   ): void {
     const builder = this.exchangeBuilders.get(messageID)
     if (!builder) return
 
     builder.setResponse({ text, finishReason })
+    if (usage) {
+      builder.setUsage({
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        cachedTokens: usage.cachedTokens,
+      })
+    }
     builder.setLatency(this.calcLatency(builder))
 
     const exchange = builder.build()
