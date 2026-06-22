@@ -59,13 +59,15 @@ async function main(): Promise<void> {
       printStats(reader)
       break
 
-    case "search":
-      if (rest.length === 0) {
+    case "search": {
+      const query = sub ? [sub, ...rest].join(" ") : rest.join(" ")
+      if (!query) {
         console.log("Usage: flight search <query>")
         return
       }
-      searchExchanges(reader, rest.join(" "))
+      searchExchanges(reader, query)
       break
+    }
 
     case "export":
       exportData(reader, rest[0])
