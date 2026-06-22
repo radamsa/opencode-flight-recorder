@@ -130,6 +130,18 @@ export class SessionManager {
     await this.writer.finalize()
   }
 
+  updateRequestText(messageId: string, text: string): void {
+    const builder = this.exchangeBuilders.get(messageId)
+    if (builder) {
+      builder.setRequest({
+        messages: [{ type: "text" as const, text }],
+        temperature: undefined,
+        maxTokens: undefined,
+        topP: undefined,
+      })
+    }
+  }
+
   private async flushExchange(exchange: Exchange): Promise<void> {
     this.exchangeCount++
     this.lastExchangeId = exchange.id

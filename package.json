@@ -4,6 +4,12 @@
 "type": "module",
   "description": "OpenCode Flight Recorder — captures, structures, and stores all LLM interactions",
   "main": "dist/plugin/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/plugin/index.js",
+      "types": "./dist/plugin/index.js"
+    }
+  },
   "types": "dist/plugin/index.d.ts",
   "files": [
     "dist"

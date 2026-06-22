@@ -2,4 +2,4 @@ export { ExchangeBuilder, normalizeUsage, estimateCost } from "./capture/Exchang
 export { JsonlWriter } from "./storage/JsonlWriter.js"
 export { SessionManager } from "./storage/SessionManager.js"
 export type * from "./types/index.js"
-export { default as flightRecorderPlugin } from "./plugin/index.js"
+export { flightRecorderPlugin } from "./plugin/index.js"
