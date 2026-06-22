@@ -4,6 +4,14 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { JsonlWriter } from "../src/storage/JsonlWriter.js"
 
+function sessionDir(baseDir: string, sessionId: string): string {
+  const now = new Date()
+  const yyyy = String(now.getFullYear())
+  const mm = String(now.getMonth() + 1).padStart(2, "0")
+  const dd = String(now.getDate()).padStart(2, "0")
+  return join(baseDir, yyyy, mm, dd, sessionId)
+}
+
 describe("JsonlWriter", () => {
   let baseDir: string
 
@@ -17,19 +25,12 @@ describe("JsonlWriter", () => {
 
   it("creates session.json on init", async () => {
     const writer = new JsonlWriter(baseDir)
-    const sessionId = "test-session"
+    await writer.init("test-session", { cwd: "/tmp", gitBranch: "main", gitCommit: "abc123" })
 
-    await writer.init(sessionId, { cwd: "/tmp", gitBranch: "main", gitCommit: "abc123" })
-
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, sessionId)
-
-    expect(existsSync(join(sessionDir, "session.json"))).toBe(true)
-    const session = JSON.parse(readFileSync(join(sessionDir, "session.json"), "utf-8"))
-    expect(session.id).toBe(sessionId)
+    const dir = sessionDir(baseDir, "test-session")
+    expect(existsSync(join(dir, "session.json"))).toBe(true)
+    const session = JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"))
+    expect(session.id).toBe("test-session")
     expect(session.cwd).toBe("/tmp")
     expect(session.gitBranch).toBe("main")
   })
@@ -50,17 +51,12 @@ describe("JsonlWriter", () => {
     await writer.appendExchange(exchange)
     await writer.finalize()
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, "test-session-2")
-
-    const lines = readFileSync(join(sessionDir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const dir = sessionDir(baseDir, "test-session-2")
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(1)
     expect(JSON.parse(lines[0]).id).toBe("exc_1")
 
-    const session = JSON.parse(readFileSync(join(sessionDir, "session.json"), "utf-8"))
+    const session = JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"))
     expect(session.exchangeCount).toBe(1)
     expect(session.endedAt).toBeDefined()
   })
@@ -82,13 +78,36 @@ describe("JsonlWriter", () => {
     await writer.finalize()
     await writer.appendExchange({ ...exchange, id: "exc_2" })
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, "test-session-3")
-
-    const lines = readFileSync(join(sessionDir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const dir = sessionDir(baseDir, "test-session-3")
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(1)
+  })
+
+  it("cleanup finalizes session", async () => {
+    const writer = new JsonlWriter(baseDir)
+    await writer.init("test-session-4", { cwd: "/tmp" })
+
+    const exchange = { id: "exc_1", sessionId: "test-session-4", timestampStart: new Date().toISOString(), provider: "openai", model: "gpt-4", request: { messages: [] } }
+    await writer.appendExchange(exchange)
+    await writer.cleanup()
+
+    const dir = sessionDir(baseDir, "test-session-4")
+    const session = JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"))
+    expect(session.endedAt).toBeDefined()
+    expect(session.exchangeCount).toBe(1)
+
+    // second cleanup should be no-op
+    await writer.cleanup()
+  })
+
+  it("handles errors gracefully", async () => {
+    const writer = new JsonlWriter(baseDir)
+    await writer.init("test-session-5", { cwd: "/tmp" })
+    // Break the exchange path to cause write error
+    ;(writer as any).exchangePath = "/nonexistent/path/exchanges.jsonl"
+
+    const exchange = { id: "exc_1", sessionId: "test-session-5", timestampStart: new Date().toISOString(), provider: "openai", model: "gpt-4", request: { messages: [] } }
+    // Should not throw
+    await expect(writer.appendExchange(exchange)).resolves.toBeUndefined()
   })
 })
