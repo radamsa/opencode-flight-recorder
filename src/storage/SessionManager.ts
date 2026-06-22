@@ -81,11 +81,11 @@ export class SessionManager {
     this.exchangeBuilders.delete(messageID)
   }
 
-  onToolBefore(tool: string, callID: string, sessionID: string): void {
+  onToolBefore(tool: string, callID: string, sessionID: string, args?: unknown): void {
     const toolEvent: ToolEvent = {
       callId: callID,
       name: tool,
-      arguments: {},
+      arguments: args ?? {},
       timestamp: new Date().toISOString(),
     }
 

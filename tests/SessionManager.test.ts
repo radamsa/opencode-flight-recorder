@@ -132,13 +132,8 @@ describe("SessionManager", () => {
 
     await sm.end()
 
-    const now = new Date()
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, "0")
-    const dd = String(now.getDate()).padStart(2, "0")
-    const sessionDir = join(baseDir, yyyy, mm, dd, sm.sessionId)
-
-    const lines = readFileSync(join(sessionDir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const dir = sessionDirFn(baseDir, sm.sessionId)
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
     expect(lines).toHaveLength(1)
 
     const exchange = JSON.parse(lines[0])
@@ -146,4 +141,35 @@ describe("SessionManager", () => {
     expect(exchange.tools[0].callId).toBe("call-1")
     expect(exchange.tools[0].result).toBe("file1.txt\nfile2.txt")
   })
+
+  it("captures tool arguments from before hook", async () => {
+    const sm = new SessionManager(undefined, baseDir)
+    await sm.start()
+
+    sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
+      { type: "text", text: "read file" },
+    ])
+
+    sm.onToolBefore("read", "call-1", sm.sessionId, { filePath: "/tmp/test.txt" })
+    sm.onToolAfter("call-1", "file content", 50)
+
+    sm.onChatResponse("msg-1", "Here it is:", "tool_use")
+
+    await sm.end()
+
+    const dir = sessionDirFn(baseDir, sm.sessionId)
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    const exchange = JSON.parse(lines[0])
+    expect(exchange.tools).toHaveLength(1)
+    expect(exchange.tools[0].arguments).toEqual({ filePath: "/tmp/test.txt" })
+    expect(exchange.tools[0].result).toBe("file content")
+  })
 })
+
+function sessionDirFn(baseDir: string, sessionId: string): string {
+  const now = new Date()
+  const yyyy = String(now.getFullYear())
+  const mm = String(now.getMonth() + 1).padStart(2, "0")
+  const dd = String(now.getDate()).padStart(2, "0")
+  return join(baseDir, yyyy, mm, dd, sessionId)
+}

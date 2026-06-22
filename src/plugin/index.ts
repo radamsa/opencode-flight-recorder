@@ -51,8 +51,8 @@ const flightRecorderPlugin: Plugin = async ({ client, project, $, directory, wor
       }
     },
 
-    "tool.execute.before": async (input, _output) => {
-      sessionManager.onToolBefore(input.tool, input.callID, input.sessionID)
+    "tool.execute.before": async (input, output) => {
+      sessionManager.onToolBefore(input.tool, input.callID, input.sessionID, output.args)
     },
 
     "tool.execute.after": async (input, output) => {
