@@ -68,7 +68,7 @@ function printExchange(exc: Exchange): void {
   console.log()
 }
 
-export function printStats(reader: StorageReader): void {
+export function printStats(reader: StorageReader, format?: string): void {
   const all = reader.getAllExchanges()
   if (all.length === 0) {
     console.log("No data.")
@@ -77,34 +77,59 @@ export function printStats(reader: StorageReader): void {
 
   const totalTokens = all.reduce((sum, e) => sum + (e.usage?.totalTokens ?? 0), 0)
   const totalCost = all.reduce((sum, e) => sum + (e.usage?.costUsd ?? 0), 0)
-  const modelMap = new Map<string, number>()
-  const providerMap = new Map<string, number>()
+  const modelMap = new Map<string, { count: number; tokens: number; cost: number }>()
+  const providerMap = new Map<string, { count: number; tokens: number; cost: number }>()
 
   for (const e of all) {
-    const key = `${e.provider}/${e.model}`
-    modelMap.set(key, (modelMap.get(key) ?? 0) + 1)
-    providerMap.set(e.provider, (providerMap.get(e.provider) ?? 0) + 1)
+    const p = e.provider
+    const m = `${e.provider}/${e.model}`
+
+    providerMap.set(p, providerMap.get(p) ?? { count: 0, tokens: 0, cost: 0 })
+    providerMap.get(p)!.count++
+    providerMap.get(p)!.tokens += e.usage?.totalTokens ?? 0
+    providerMap.get(p)!.cost += e.usage?.costUsd ?? 0
+
+    modelMap.set(m, modelMap.get(m) ?? { count: 0, tokens: 0, cost: 0 })
+    modelMap.get(m)!.count++
+    modelMap.get(m)!.tokens += e.usage?.totalTokens ?? 0
+    modelMap.get(m)!.cost += e.usage?.costUsd ?? 0
   }
 
-  console.log("Stats:")
-  console.log("─".repeat(80))
-  console.log(`  Total exchanges:     ${all.length}`)
-  console.log(`  Total tokens:        ${totalTokens.toLocaleString()}`)
-  console.log(`  Total cost (USD):    $${totalCost.toFixed(4)}`)
-  console.log(`  Avg tokens/exchange: ${Math.round(totalTokens / all.length).toLocaleString()}`)
-  console.log()
-
-  console.log("  By provider:")
-  for (const [provider, count] of providerMap) {
-    console.log(`    ${provider}: ${count}`)
+  const stats = {
+    exchanges: all.length,
+    sessions: new Set(all.map((e) => e.sessionId)).size,
+    totalTokens,
+    avgTokens: Math.round(totalTokens / all.length),
+    totalCost: Math.round(totalCost * 10000) / 10000,
+    providers: Object.fromEntries([...providerMap.entries()].map(([k, v]) => [k, v])),
+    models: Object.fromEntries([...modelMap.entries()].map(([k, v]) => [k, v])),
   }
-  console.log()
 
-  console.log("  By model:")
-  for (const [model, count] of modelMap) {
-    console.log(`    ${model}: ${count}`)
+  if (format === "json") {
+    console.log(JSON.stringify(stats, null, 2))
+  } else if (format === "yaml") {
+    console.log(toYaml(stats))
+  } else {
+    console.log("Stats:")
+    console.log("─".repeat(80))
+    console.log(`  Total exchanges:     ${all.length}`)
+    console.log(`  Total tokens:        ${totalTokens.toLocaleString()}`)
+    console.log(`  Total cost (USD):    $${totalCost.toFixed(4)}`)
+    console.log(`  Avg tokens/exchange: ${Math.round(totalTokens / all.length).toLocaleString()}`)
+    console.log()
+
+    console.log("  By provider:")
+    for (const [provider, data] of providerMap) {
+      console.log(`    ${provider}: ${data.count}`)
+    }
+    console.log()
+
+    console.log("  By model:")
+    for (const [model, data] of modelMap) {
+      console.log(`    ${model}: ${data.count}`)
+    }
+    console.log()
   }
-  console.log()
 }
 
 function toYaml(obj: unknown, indent: number = 0): string {

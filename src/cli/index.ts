@@ -16,7 +16,8 @@ Commands:
   report [spec]               Generate HTML usage report (spec: all, YYYY, YYYY-MM, YYYY-MM-DD)
                                 default: all
   stats                       Show aggregate statistics
-  search [json|yaml] <query>  Search exchanges by text (default: pretty, use json/yaml for output format)
+  stats [json|yaml]           Aggregate statistics (default: pretty)
+  search [json|yaml] <query>  Search exchanges by text (default: pretty)
   export [sessionId]          Export data as JSON
   help                        Show this help
 `)
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
       break
 
     case "stats":
-      printStats(reader)
+      printStats(reader, sub === "json" || sub === "yaml" ? sub : undefined)
       break
 
     case "search": {
