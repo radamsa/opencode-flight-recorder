@@ -24,7 +24,7 @@ export class SessionManager {
   async start(sessionId: string): Promise<void> {
     if (this.started) return
     this.started = true
-    this.sessionId = sessionId
+    this.sessionId = sessionId || `ses_${Date.now().toString(36)}`
     const meta = {
       cwd: cwd(),
       gitBranch: this.getGitBranch(),

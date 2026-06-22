@@ -35,7 +35,14 @@ const sessionMeta = new Map()
 
 export const flightRecorderPlugin = async ({ client, project, $, directory, worktree }) => {
   const sessionManager = new SessionManager()
-  await sessionManager.start()
+  let started = false
+
+  async function ensureStart(sessionId) {
+    if (!started) {
+      started = true
+      await sessionManager.start(sessionId)
+    }
+  }
 
   return {
     dispose: async () => {
@@ -72,6 +79,7 @@ export const flightRecorderPlugin = async ({ client, project, $, directory, work
         const completed = !!msg.time?.completed
 
         if (role === "user" && !idMap.has(msg.id)) {
+          await ensureStart(msg.sessionID)
           idMap.set(msg.id, msg.id)
           const text = partTexts.get(msg.id) || ""
           const fallback = sessionMeta.get(msg.sessionID) || { provider: "unknown", model: "unknown" }
@@ -100,6 +108,7 @@ export const flightRecorderPlugin = async ({ client, project, $, directory, work
     },
 
     "chat.params": async (input, output) => {
+      await ensureStart(input.sessionID)
       sessionManager.onChatParams(input.sessionID, {
         temperature: output.temperature,
         maxTokens: output.maxOutputTokens,
