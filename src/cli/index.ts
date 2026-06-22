@@ -16,7 +16,7 @@ Commands:
   report [spec]               Generate HTML usage report (spec: all, YYYY, YYYY-MM, YYYY-MM-DD)
                                 default: all
   stats                       Show aggregate statistics
-  search <query>              Search exchanges by text
+  search [--json|--yaml] <query>  Search exchanges by text (default: pretty)
   export [sessionId]          Export data as JSON
   help                        Show this help
 `)
@@ -60,12 +60,15 @@ async function main(): Promise<void> {
       break
 
     case "search": {
-      const query = sub ? [sub, ...rest].join(" ") : rest.join(" ")
+      const allArgs = sub ? [sub, ...rest] : rest
+      const jsonFlag = allArgs.includes("--json")
+      const yamlFlag = allArgs.includes("--yaml")
+      const query = allArgs.filter((a) => a !== "--json" && a !== "--yaml").join(" ")
       if (!query) {
-        console.log("Usage: flight search <query>")
+        console.log("Usage: flight search [--json|--yaml] <query>")
         return
       }
-      searchExchanges(reader, query)
+      searchExchanges(reader, query, jsonFlag ? "json" : yamlFlag ? "yaml" : undefined)
       break
     }
 

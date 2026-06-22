@@ -107,7 +107,29 @@ export function printStats(reader: StorageReader): void {
   console.log()
 }
 
-export function searchExchanges(reader: StorageReader, query: string): void {
+function toYaml(obj: unknown, indent: number = 0): string {
+  const pad = "  ".repeat(indent)
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return `${pad}[]\n`
+    return obj.map((item) => `${pad}- ${toYaml(item, indent + 1).trimStart()}`).join("")
+  }
+  if (obj !== null && typeof obj === "object") {
+    const keys = Object.keys(obj as Record<string, unknown>)
+    if (keys.length === 0) return `${pad}{}\n`
+    return keys.map((k) => {
+      const v = (obj as Record<string, unknown>)[k]
+      if (typeof v === "string" && (v.includes("\n") || v.includes(":") || v.includes("#"))) {
+        return `${pad}${k}: |\n${pad}  ${v.split("\n").join(`\n${pad}  `)}\n`
+      }
+      if (v === null || v === undefined) return `${pad}${k}: null\n`
+      if (typeof v === "object") return `${pad}${k}:\n${toYaml(v, indent + 1)}`
+      return `${pad}${k}: ${v}\n`
+    }).join("")
+  }
+  return `${pad}${obj}\n`
+}
+
+export function searchExchanges(reader: StorageReader, query: string, format?: string): void {
   const all = reader.getAllExchanges()
   const lowerQuery = query.toLowerCase()
   const matches = all.filter((e) => {
@@ -121,10 +143,16 @@ export function searchExchanges(reader: StorageReader, query: string): void {
     return
   }
 
-  console.log(`Found ${matches.length} matches for "${query}":`)
-  console.log("─".repeat(80))
-  for (const exc of matches) {
-    printExchange(exc)
+  if (format === "json") {
+    console.log(JSON.stringify(matches, null, 2))
+  } else if (format === "yaml") {
+    console.log(toYaml(matches))
+  } else {
+    console.log(`Found ${matches.length} matches for "${query}":`)
+    console.log("─".repeat(80))
+    for (const exc of matches) {
+      printExchange(exc)
+    }
   }
 }
 
