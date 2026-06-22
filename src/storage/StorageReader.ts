@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, existsSync, rmSync } from "node:fs"
-import { join, resolve, normalize, sep } from "node:path"
+import { join, resolve, normalize, sep, dirname } from "node:path"
 import { homedir } from "node:os"
 import type { Session, Exchange } from "../types/index.js"
 
@@ -114,10 +114,29 @@ export class StorageReader {
 
   clearHistory(spec: string): number {
     const target = this.resolveSpecTarget(spec)
-    if (!target || !existsSync(target)) return 0
+    if (!target) return 0
 
-    const count = this.listAllEntries().filter((e) => e.dir.startsWith(target)).length
-    rmSync(target, { recursive: true, force: true })
-    return count
+    const entries = this.listAllEntries().filter((e) => e.dir.startsWith(target))
+    if (entries.length === 0) return 0
+
+    for (const entry of entries) {
+      rmSync(entry.dir, { recursive: true, force: true })
+    }
+
+    // clean up empty parent dirs bottom-up
+    let dir = dirname(entries[0].dir)
+    while (dir.startsWith(this.baseDir)) {
+      try {
+        const remaining = readdirSync(dir)
+        if (remaining.length === 0) {
+          rmSync(dir, { recursive: true, force: true })
+        }
+      } catch {
+        // skip
+      }
+      dir = dirname(dir)
+    }
+
+    return entries.length
   }
 }
