@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { StorageReader } from "../storage/StorageReader.js"
-import { listSessions, showSession, printStats, searchExchanges, exportData, clearHistory } from "./commands.js"
+import { listSessions, showSession, printStats, searchExchanges, exportData, clearHistory, report } from "./commands.js"
 
 const reader = new StorageReader()
 
@@ -12,6 +12,8 @@ Commands:
   session list                List all recorded sessions
   session show <id>           Show session details and exchanges
   clear [spec]                Clear history (spec: all, YYYY, YYYY-MM, YYYY-MM-DD)
+                                default: all
+  report [spec]               Generate HTML usage report (spec: all, YYYY, YYYY-MM, YYYY-MM-DD)
                                 default: all
   stats                       Show aggregate statistics
   search <query>              Search exchanges by text
@@ -47,6 +49,10 @@ async function main(): Promise<void> {
 
     case "clear":
       await clearHistory(reader, sub || "all")
+      break
+
+    case "report":
+      report(reader, sub || "all")
       break
 
     case "stats":
