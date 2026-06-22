@@ -84,11 +84,21 @@ OpenCode automatically loads `.js`/`.ts` files from `~/.config/opencode/plugins/
 The package includes a standalone CLI for reading recorded data:
 
 ```bash
-# List all sessions (one line each)
+# List all sessions (one line each, 24h time, truncated ID)
 npm run flight session list
 
 # Show a specific session with all exchanges
 npm run flight session show <session-id>
+
+# Aggregate statistics
+npm run flight stats               # pretty-print table
+npm run flight stats json          # JSON output
+npm run flight stats yaml          # YAML output
+
+# Full-text search across all exchanges
+npm run flight search "error message"      # pretty-print
+npm run flight search json "error message" # JSON output
+npm run flight search yaml "error message" # YAML output
 
 # Generate HTML usage report (all time, or by date)
 npm run flight report              # all time
@@ -96,21 +106,18 @@ npm run flight report 2026         # year 2026
 npm run flight report 2026-06      # June 2026
 npm run flight report 2026-06-22   # single day
 
-# Aggregate statistics (terminal)
-npm run flight stats
-
-# Full-text search across all exchanges
-npm run flight search "error message"
-
 # Clear recorded history
 npm run flight clear               # all sessions (with confirmation)
 npm run flight clear 2026          # only sessions from 2026
+npm run flight clear 2026-06       # only sessions from June 2026
+npm run flight clear 2026-06-22    # only sessions from that day
 
-# Export all data as JSON
-npm run flight export
+# Export data as JSON
+npm run flight export              # all sessions
+npm run flight export <session-id> # single session
 
-# Export a single session
-npm run flight export <session-id>
+# Show help
+npm run flight help
 ```
 
 If installed globally (`npm link` or via npm), use `flight` directly:
@@ -118,10 +125,15 @@ If installed globally (`npm link` or via npm), use `flight` directly:
 ```bash
 flight session list
 flight stats
+flight stats json
 flight search "database migration"
+flight search yaml "error message"
 flight report
 flight clear 2026-01
+flight export <session-id>
 ```
+
+> **Note:** npm intercepts `--` flags (like `--json`, `--yaml`). Use positional subcommands (`stats json`, `search yaml`) instead.
 
 ## Data Model
 
