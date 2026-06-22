@@ -40,88 +40,43 @@ YYYY/
 ```bash
 git clone <repo-url> opencode-flight-recorder
 cd opencode-flight-recorder
-npm install
-npm run build
+npm install && npm run build
 ```
 
-### 2. Install as a local plugin
-
-Your OpenCode config directory needs a `package.json` so that local plugins can use npm dependencies.
-
-**If the file already exists** (`.opencode/package.json` or `~/.config/opencode/package.json`), add `opencode-flight-recorder` to its `dependencies`:
-
-```json
-{
-  "dependencies": {
-    "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder"
-  }
-}
-```
-
-**If it does not exist**, create it:
+### 2. Run the installer
 
 ```bash
-# project-level (recommended)
-mkdir -p .opencode
-cat > .opencode/package.json <<EOF
-{
-  "dependencies": {
-    "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder"
-  }
-}
-EOF
-
-# OR global-level
-mkdir -p ~/.config/opencode
-cat > ~/.config/opencode/package.json <<EOF
-{
-  "dependencies": {
-    "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder"
-  }
-}
-EOF
+./install.sh
 ```
 
-Then run `bun install` in that directory, or just start OpenCode — it runs `bun install` automatically on startup.
+The script will ask whether to install for the **current project** or **globally**. It automatically:
 
-### 3. Register the plugin in `opencode.json`
+- Builds the plugin if needed
+- Creates or updates `.opencode/package.json` with the dependency (preserving existing entries)
+- Creates or updates `opencode.json` with the plugin in the `plugin` array (preserving existing plugins)
+- Runs `bun install` if bun is available
 
-Add `"opencode-flight-recorder"` to the `plugin` array in your OpenCode config.
+**Non-interactive usage:**
 
-**If `opencode.json` already exists**, edit it to include the plugin:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "opencode-flight-recorder",
-    "... other plugins ..."
-  ]
-}
+```bash
+./install.sh --project           # install in current directory
+./install.sh --global            # install globally (~/.config/opencode)
+./install.sh /path/to/project    # install in a specific project
 ```
 
-**If it does not exist**, create it at the project root (`opencode.json`) or globally (`~/.config/opencode/opencode.json`):
+### 3. Verify it loads
 
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-flight-recorder"]
-}
-```
-
-### 4. Verify it loads
-
-Start OpenCode. The plugin logs its activity via `client.app.log()` — no console output by default. To verify the plugin is loaded, run:
+Start (or restart) OpenCode. After making a few requests, check:
 
 ```bash
 ls ~/.opencode-flight-recorder/sessions/
 ```
 
-After making a few requests in OpenCode, you should see session directories appear.
+You should see session directories appear.
 
-## Alternative: symlink to the global plugins directory
+## Alternative: symlink (no npm needed)
 
-If you don't want to deal with npm packages, symlink the compiled output directly:
+If you prefer not to use npm packages, symlink the compiled plugin directly:
 
 ```bash
 mkdir -p ~/.config/opencode/plugins
