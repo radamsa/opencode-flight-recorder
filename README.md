@@ -49,19 +49,13 @@ npm install && npm run build
 ./install.sh
 ```
 
-The script will ask whether to install for the **current project** or **globally**. It automatically:
-
-- Builds the plugin if needed
-- Creates or updates `.opencode/package.json` with the dependency (preserving existing entries)
-- Creates or updates `opencode.json` with the plugin in the `plugin` array (preserving existing plugins)
-- Runs `bun install` if bun is available
+The script will ask whether to install for the **current project** or **globally**. It runs `opencode plugin <path>` internally — OpenCode's built-in plugin command handles everything: updating `opencode.json`, installing dependencies, and linking the package.
 
 **Non-interactive usage:**
 
 ```bash
 ./install.sh --project           # install in current directory
 ./install.sh --global            # install globally (~/.config/opencode)
-./install.sh /path/to/project    # install in a specific project
 ```
 
 ### 3. Verify it loads
