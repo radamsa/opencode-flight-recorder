@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs"
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { StorageReader } from "../src/storage/StorageReader.js"
@@ -87,5 +87,84 @@ describe("StorageReader", () => {
   it("returns empty array for nonexistent session exchanges", () => {
     const reader = new StorageReader(baseDir)
     expect(reader.getExchanges("nonexistent")).toEqual([])
+  })
+
+  describe("clearHistory", () => {
+    it("returns 0 when no sessions exist", () => {
+      const reader = new StorageReader(baseDir)
+      expect(reader.clearHistory("all")).toBe(0)
+    })
+
+    it("clears all sessions with spec=all", () => {
+      createTestSession(baseDir, "s1", 1)
+      createTestSession(baseDir, "s2", 1)
+      const reader = new StorageReader(baseDir)
+      expect(reader.clearHistory("all")).toBe(2)
+      expect(reader.listSessions()).toHaveLength(0)
+    })
+
+    it("clears sessions by year", () => {
+      const now = new Date()
+      const y = String(now.getFullYear())
+      const m = String(now.getMonth() + 1).padStart(2, "0")
+      const d = String(now.getDate()).padStart(2, "0")
+
+      mkdirSync(join(baseDir, "2020", "01", "01", "old-session"), { recursive: true })
+      writeFileSync(join(baseDir, "2020", "01", "01", "old-session", "session.json"), JSON.stringify({ id: "old", createdAt: "2020-01-01", exchangeCount: 1 }))
+
+      createTestSession(baseDir, "current", 1)
+      const reader = new StorageReader(baseDir)
+      expect(reader.clearHistory("2020")).toBe(1)
+      expect(reader.listSessions()).toHaveLength(1)
+    })
+
+    it("clears sessions by year-month", () => {
+      const now = new Date()
+      const y = String(now.getFullYear())
+      const m = String(now.getMonth() + 1).padStart(2, "0")
+      const d = String(now.getDate()).padStart(2, "0")
+
+      mkdirSync(join(baseDir, y, "01", "01", "jan-session"), { recursive: true })
+      writeFileSync(join(baseDir, y, "01", "01", "jan-session", "session.json"), JSON.stringify({ id: "jan", createdAt: `${y}-01-01`, exchangeCount: 1 }))
+
+      createTestSession(baseDir, "feb-session", 1)
+      const reader = new StorageReader(baseDir)
+      expect(reader.clearHistory(`${y}-01`)).toBe(1)
+      expect(reader.listSessions()).toHaveLength(1)
+    })
+
+    it("clears sessions by year-month-day", () => {
+      const now = new Date()
+      const y = String(now.getFullYear())
+      const m = String(now.getMonth() + 1).padStart(2, "0")
+      const d = String(now.getDate()).padStart(2, "0")
+
+      mkdirSync(join(baseDir, y, m, d, "today-session"), { recursive: true })
+      writeFileSync(join(baseDir, y, m, d, "today-session", "session.json"), JSON.stringify({ id: "today", createdAt: now.toISOString(), exchangeCount: 1 }))
+
+      const reader = new StorageReader(baseDir)
+      expect(reader.clearHistory(`${y}-${m}-${d}`)).toBe(1)
+      expect(reader.listSessions()).toHaveLength(0)
+    })
+
+    it("rejects invalid spec format", () => {
+      const reader = new StorageReader(baseDir)
+      expect(reader.resolveSpecTarget("abc")).toBeNull()
+      expect(reader.resolveSpecTarget("202")).toBeNull()
+      expect(reader.resolveSpecTarget("2026-1")).toBeNull()
+      expect(reader.resolveSpecTarget("2026-01-1")).toBeNull()
+    })
+
+    it("rejects path traversal", () => {
+      const reader = new StorageReader(baseDir)
+      expect(reader.resolveSpecTarget("../../etc")).toBeNull()
+    })
+
+    it("clears empty baseDir without error", () => {
+      rmSync(baseDir, { recursive: true, force: true })
+      const reader = new StorageReader(baseDir)
+      expect(() => reader.clearHistory("all")).not.toThrow()
+      mkdirSync(baseDir, { recursive: true })
+    })
   })
 })

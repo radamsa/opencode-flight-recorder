@@ -119,6 +119,29 @@ export function searchExchanges(reader: StorageReader, query: string): void {
   }
 }
 
+export function clearHistory(reader: StorageReader, spec: string, force: boolean): void {
+  const target = reader.resolveSpecTarget(spec)
+  if (!target) {
+    console.log(`Invalid spec "${spec}". Use all, YYYY, YYYY-MM, or YYYY-MM-DD.`)
+    return
+  }
+
+  const preview = reader.countSessionsInTarget(target)
+  if (preview === 0) {
+    console.log(`Nothing to clear for "${spec}".`)
+    return
+  }
+
+  if (!force) {
+    console.log(`This will delete ${preview} session(s).`)
+    console.log("Use --force to confirm: flight clear --force " + spec)
+    return
+  }
+
+  const count = reader.clearHistory(spec)
+  console.log(`Deleted ${count} session(s).`)
+}
+
 export function exportData(reader: StorageReader, sessionId?: string): void {
   const all = sessionId
     ? reader.getExchanges(sessionId)

@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, existsSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { readFileSync, readdirSync, existsSync, rmSync } from "node:fs"
+import { join, resolve, normalize, sep } from "node:path"
 import { homedir } from "node:os"
 import type { Session, Exchange } from "../types/index.js"
 
@@ -91,5 +91,33 @@ export class StorageReader {
     return all.sort(
       (a, b) => new Date(a.timestampStart).getTime() - new Date(b.timestampStart).getTime(),
     )
+  }
+
+  resolveSpecTarget(spec: string): string | null {
+    if (spec === "all") return this.baseDir
+
+    const parts = spec.split("-").filter(Boolean)
+    if (parts.length < 1 || parts.length > 3) return null
+    if (!/^\d{4}$/.test(parts[0])) return null
+    if (parts.length >= 2 && !/^\d{2}$/.test(parts[1])) return null
+    if (parts.length >= 3 && !/^\d{2}$/.test(parts[2])) return null
+
+    const target = normalize(join(this.baseDir, ...parts))
+    const base = normalize(this.baseDir) + sep
+    if (!target.startsWith(base) && target !== normalize(this.baseDir)) return null
+    return target
+  }
+
+  countSessionsInTarget(target: string): number {
+    return this.listAllEntries().filter((e) => e.dir.startsWith(target)).length
+  }
+
+  clearHistory(spec: string): number {
+    const target = this.resolveSpecTarget(spec)
+    if (!target || !existsSync(target)) return 0
+
+    const count = this.listAllEntries().filter((e) => e.dir.startsWith(target)).length
+    rmSync(target, { recursive: true, force: true })
+    return count
   }
 }
