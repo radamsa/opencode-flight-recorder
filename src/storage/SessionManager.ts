@@ -14,6 +14,8 @@ export class SessionManager {
   private pendingToolCalls: Map<string, { exchangeId: string; toolCallId: string }> = new Map()
   private paramsStore: Map<string, { temperature?: number; maxTokens?: number; topP?: number }> = new Map()
   private exchangeCount: number = 0
+  private rootExchangeId: string | undefined
+  private lastExchangeId: string | undefined
 
   constructor(sessionId?: string, baseDir?: string) {
     this.sessionId = sessionId ?? randomUUID()
@@ -41,9 +43,20 @@ export class SessionManager {
     const builder = new ExchangeBuilder(sessionID)
     builder.setProvider(provider).setModel(model)
 
+    if (this.lastExchangeId) {
+      builder.setLineage({
+        parentId: this.lastExchangeId,
+        rootId: this.rootExchangeId ?? this.lastExchangeId,
+      })
+    }
+
     const params = this.paramsStore.get(sessionID)
+    const mappedMessages = parts.map((p) => {
+      const text = p.type === "text" ? (p.text ?? "") : ""
+      return { type: p.type, text }
+    })
     builder.setRequest({
-      messages: parts.map(p => ({ type: p.type, text: p.type === "text" ? (p.text ?? "") : "" })),
+      messages: mappedMessages,
       temperature: params?.temperature,
       maxTokens: params?.maxTokens,
       topP: params?.topP,
@@ -119,6 +132,10 @@ export class SessionManager {
 
   private async flushExchange(exchange: Exchange): Promise<void> {
     this.exchangeCount++
+    this.lastExchangeId = exchange.id
+    if (!this.rootExchangeId) {
+      this.rootExchangeId = exchange.id
+    }
     await this.writer.appendExchange(exchange)
   }
 

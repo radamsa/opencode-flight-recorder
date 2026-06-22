@@ -142,6 +142,47 @@ describe("SessionManager", () => {
     expect(exchange.tools[0].result).toBe("file1.txt\nfile2.txt")
   })
 
+  it("builds conversation lineage with parentId and rootId", async () => {
+    const sm = new SessionManager(undefined, baseDir)
+    await sm.start()
+
+    sm.onChatMessage("msg-1", sm.sessionId, "anthropic", "claude-3", [
+      { type: "text", text: "first message" },
+    ])
+    sm.onChatResponse("msg-1", "first response", "stop")
+
+    sm.onChatMessage("msg-2", sm.sessionId, "anthropic", "claude-3", [
+      { type: "text", text: "second message" },
+    ])
+    sm.onChatResponse("msg-2", "second response", "stop")
+
+    sm.onChatMessage("msg-3", sm.sessionId, "anthropic", "claude-3", [
+      { type: "text", text: "third message" },
+    ])
+    sm.onChatResponse("msg-3", "third response", "stop")
+
+    await sm.end()
+
+    const dir = sessionDirFn(baseDir, sm.sessionId)
+    const lines = readFileSync(join(dir, "exchanges.jsonl"), "utf-8").trim().split("\n")
+    expect(lines).toHaveLength(3)
+
+    const exc1 = JSON.parse(lines[0])
+    const exc2 = JSON.parse(lines[1])
+    const exc3 = JSON.parse(lines[2])
+
+    // First exchange: no parent, self as root
+    expect(exc1.lineage).toBeUndefined()
+
+    // Second: parent is first, root is first
+    expect(exc2.lineage.parentId).toBe(exc1.id)
+    expect(exc2.lineage.rootId).toBe(exc1.id)
+
+    // Third: parent is second, root is still first
+    expect(exc3.lineage.parentId).toBe(exc2.id)
+    expect(exc3.lineage.rootId).toBe(exc1.id)
+  })
+
   it("captures tool arguments from before hook", async () => {
     const sm = new SessionManager(undefined, baseDir)
     await sm.start()
