@@ -46,23 +46,61 @@ npm run build
 
 ### 2. Install as a local plugin
 
-Create a `package.json` in your OpenCode config directory (so local plugins can use npm dependencies):
+Your OpenCode config directory needs a `package.json` so that local plugins can use npm dependencies.
+
+**If the file already exists** (`.opencode/package.json` or `~/.config/opencode/package.json`), add `opencode-flight-recorder` to its `dependencies`:
+
+```json
+{
+  "dependencies": {
+    "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder"
+  }
+}
+```
+
+**If it does not exist**, create it:
 
 ```bash
 # project-level (recommended)
 mkdir -p .opencode
-echo '{ "dependencies": { "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder" } }' > .opencode/package.json
+cat > .opencode/package.json <<EOF
+{
+  "dependencies": {
+    "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder"
+  }
+}
+EOF
 
 # OR global-level
 mkdir -p ~/.config/opencode
-echo '{ "dependencies": { "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder" } }' > ~/.config/opencode/package.json
+cat > ~/.config/opencode/package.json <<EOF
+{
+  "dependencies": {
+    "opencode-flight-recorder": "file:/path/to/opencode-flight-recorder"
+  }
+}
+EOF
 ```
 
 Then run `bun install` in that directory, or just start OpenCode — it runs `bun install` automatically on startup.
 
 ### 3. Register the plugin in `opencode.json`
 
-Add the plugin to your OpenCode config:
+Add `"opencode-flight-recorder"` to the `plugin` array in your OpenCode config.
+
+**If `opencode.json` already exists**, edit it to include the plugin:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "opencode-flight-recorder",
+    "... other plugins ..."
+  ]
+}
+```
+
+**If it does not exist**, create it at the project root (`opencode.json`) or globally (`~/.config/opencode/opencode.json`):
 
 ```json
 {
@@ -70,8 +108,6 @@ Add the plugin to your OpenCode config:
   "plugin": ["opencode-flight-recorder"]
 }
 ```
-
-> **Tip:** You can place this file at the project root (`opencode.json`) or globally (`~/.config/opencode/opencode.json`).
 
 ### 4. Verify it loads
 
