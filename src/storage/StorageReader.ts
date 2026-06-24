@@ -65,9 +65,16 @@ export class StorageReader {
   }
 
   getExchanges(sessionId: string): Exchange[] {
-    const entry = this.listAllEntries().find((e) => e.session.id === sessionId)
-    if (!entry) return []
-    const exchangePath = join(entry.dir, "exchanges.jsonl")
+    const entries = this.listAllEntries().filter((e) => e.session.id === sessionId)
+    const all: Exchange[] = []
+    for (const entry of entries) {
+      all.push(...this.readExchangesFromDir(entry.dir))
+    }
+    return all
+  }
+
+  private readExchangesFromDir(dir: string): Exchange[] {
+    const exchangePath = join(dir, "exchanges.jsonl")
     if (!existsSync(exchangePath)) return []
     try {
       const raw = readFileSync(exchangePath, "utf-8")
@@ -85,8 +92,7 @@ export class StorageReader {
     const entries = this.listAllEntries()
     const all: Exchange[] = []
     for (const entry of entries) {
-      const exchanges = this.getExchanges(entry.session.id)
-      all.push(...exchanges)
+      all.push(...this.readExchangesFromDir(entry.dir))
     }
     return all.sort(
       (a, b) => new Date(a.timestampStart).getTime() - new Date(b.timestampStart).getTime(),

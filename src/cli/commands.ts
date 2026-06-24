@@ -217,7 +217,7 @@ export function report(reader: StorageReader, spec: string): void {
   }
 
   const allSessions = reader.listSessions()
-  const sessions = spec === "all"
+  const filtered = spec === "all"
     ? allSessions
     : allSessions.filter((s) => {
         const d = new Date(s.createdAt)
@@ -227,6 +227,14 @@ export function report(reader: StorageReader, spec: string): void {
         if (parts[2] && String(d.getDate()).padStart(2, "0") !== parts[2]) return false
         return true
       })
+
+  // deduplicate session IDs (same session may span multiple date dirs)
+  const seen = new Set<string>()
+  const sessions = filtered.filter((s) => {
+    if (seen.has(s.id)) return false
+    seen.add(s.id)
+    return true
+  })
 
   if (sessions.length === 0) {
     console.log("No data for the given period.")
