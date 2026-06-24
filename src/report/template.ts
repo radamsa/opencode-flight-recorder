@@ -85,11 +85,11 @@ export function generateHtmlReport(sessions: Session[], exchanges: Exchange[], s
   .bar-label { display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.8125rem; }
   .bar-row { margin-bottom: 0.75rem; }
   .recent { background: #1e293b; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; }
-  .recent-item { display: grid; grid-template-columns: 1fr auto auto 1fr; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #1e293b; font-size: 0.8125rem; }
+  .recent-item { display: grid; grid-template-columns: 140px 150px 110px 1fr; padding: 0.5rem 0; border-bottom: 1px solid #1e293b; font-size: 0.8125rem; }
   .recent-item:last-child { border-bottom: none; }
-  .recent-id { color: #94a3b8; font-family: "SF Mono", Menlo, monospace; }
+  .recent-id { color: #94a3b8; font-family: "SF Mono", Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .recent-date { color: #64748b; }
-  .recent-exc { color: #34d399; text-align: right; }
+  .recent-exc { color: #34d399; }
   .recent-cwd { text-align: right; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-wrap { overflow-x: auto; }
   .cal-grids { display: flex; gap: 2rem; flex-wrap: wrap; }
