@@ -228,25 +228,25 @@ export function report(reader: StorageReader, spec: string): void {
         return true
       })
 
-  // deduplicate session IDs (same session may span multiple date dirs)
+  if (filtered.length === 0) {
+    console.log("No data for the given period.")
+    return
+  }
+
+  // deduplicate for exchange loading (same session spans multiple date dirs)
   const seen = new Set<string>()
-  const sessions = filtered.filter((s) => {
+  const exchangeSessions = filtered.filter((s) => {
     if (seen.has(s.id)) return false
     seen.add(s.id)
     return true
   })
 
-  if (sessions.length === 0) {
-    console.log("No data for the given period.")
-    return
-  }
-
   const exchanges: Exchange[] = []
-  for (const s of sessions) {
+  for (const s of exchangeSessions) {
     exchanges.push(...reader.getExchanges(s.id))
   }
 
-  const html = generateHtmlReport(sessions, exchanges, spec)
+  const html = generateHtmlReport(filtered, exchanges, spec)
   const filename = `flight-report-${spec === "all" ? "all" : spec}.html`
   writeFileSync(filename, html, "utf-8")
   console.log(`Report saved to ${filename}`)
