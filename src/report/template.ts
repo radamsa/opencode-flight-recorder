@@ -37,6 +37,12 @@ export function generateHtmlReport(sessions: Session[], exchanges: Exchange[], s
   const sortedModels = [...modelMap.entries()].sort((a, b) => b[1].count - a[1].count)
   const sortedDays = [...dayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))
 
+  const monthSet = new Set<string>()
+  for (const [day] of dayMap) {
+    monthSet.add(day.slice(0, 7))
+  }
+  const sortedMonths = [...monthSet].sort()
+
   const maxProviderCount = sortedProviders[0]?.[1].count ?? 1
   const maxDayCount = sortedDays[0]?.[1] ?? 1
   const maxModelCount = sortedModels[0]?.[1].count ?? 1
@@ -84,6 +90,15 @@ export function generateHtmlReport(sessions: Session[], exchanges: Exchange[], s
   .recent-id { color: #94a3b8; font-family: "SF Mono", Menlo, monospace; }
   .recent-date { color: #64748b; }
   .recent-exc { color: #34d399; }
+  .cal-wrap { overflow-x: auto; }
+  .cal-grids { display: flex; gap: 2rem; flex-wrap: wrap; }
+  .cal-month { min-width: 220px; }
+  .cal-month-label { font-size: 0.9375rem; font-weight: 600; color: #f1f5f9; margin-bottom: 0.5rem; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-dow { font-size: 0.6rem; color: #64748b; text-align: center; padding: 2px 0; text-transform: uppercase; }
+  .cal-cell { aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #e2e8f0; min-width: 26px; cursor: default; }
+  .cal-filled { background: #6366f1; border: 1px solid #6366f1; }
+  .cal-empty { background: transparent; border: 1px solid #334155; color: #475569; }
   .footer { text-align: center; color: #475569; font-size: 0.75rem; margin-top: 3rem; }
 </style>
 </head>
@@ -130,30 +145,40 @@ export function generateHtmlReport(sessions: Session[], exchanges: Exchange[], s
     </table>
   </div>
 
-  ${sortedDays.length > 0 ? `<h2>Daily Activity</h2>
-  <div class="chart-wrap">
-    <svg width="${Math.max(sortedDays.length * 60, 300)}" height="220" viewBox="0 0 ${Math.max(sortedDays.length * 60, 300)} 220" xmlns="http://www.w3.org/2000/svg">
-      <style>
-        .axis { stroke: #334155; stroke-width: 1; }
-        .grid { stroke: #1e293b; stroke-width: 1; }
-        .bar-rect { fill: #6366f1; rx: 3; }
-        .bar-label { fill: #94a3b8; font-size: 10px; text-anchor: middle; }
-        .bar-val { fill: #e2e8f0; font-size: 10px; text-anchor: middle; }
-      </style>
-      <line x1="40" y1="190" x2="${Math.max(sortedDays.length * 60, 280)}" y2="190" class="axis"/>
-      <line x1="40" y1="20" x2="40" y2="190" class="axis"/>
-      ${[0, 0.25, 0.5, 0.75, 1].map((frac) => {
-        const y = 190 - (frac * 160)
-        return `<line x1="38" y1="${y}" x2="40" y2="${y}" class="grid"/><text x="36" y="${y + 4}" fill="#64748b" font-size="9" text-anchor="end">${Math.round(frac * maxDayCount)}</text>`
+  ${sortedMonths.length > 0 ? `<h2>Activity Calendar</h2>
+  <div class="chart-wrap cal-wrap">
+    <div class="cal-grids">
+      ${sortedMonths.map((month) => {
+        const [yearStr, monthStr] = month.split("-")
+        const year = parseInt(yearStr)
+        const monthNum = parseInt(monthStr)
+        const daysInMonth = new Date(year, monthNum, 0).getDate()
+        const firstDow = new Date(year, monthNum - 1, 1).getDay()
+        const startOffset = firstDow === 0 ? 6 : firstDow - 1
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        const monthName = monthNames[monthNum - 1]
+
+        let cells = ""
+        for (const d of ["M", "T", "W", "T", "F", "S", "S"]) {
+          cells += `<div class="cal-dow">${d}</div>`
+        }
+        for (let i = 0; i < startOffset; i++) {
+          cells += `<div class="cal-cell cal-empty"></div>`
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${month}-${String(d).padStart(2, "0")}`
+          const count = dayMap.get(dateStr) ?? 0
+          if (count > 0) {
+            const intensity = count / maxDayCount
+            const opacity = (0.15 + 0.85 * intensity).toFixed(2)
+            cells += `<div class="cal-cell cal-filled" style="opacity:${opacity}" title="${dateStr}: ${count} exchange${count !== 1 ? "s" : ""}">${d}</div>`
+          } else {
+            cells += `<div class="cal-cell cal-empty" title="${dateStr}: 0 exchanges">${d}</div>`
+          }
+        }
+        return `<div class="cal-month"><div class="cal-month-label">${monthName} ${year}</div><div class="cal-grid">${cells}</div></div>`
       }).join("\n      ")}
-      ${sortedDays.map(([day, count], i) => {
-        const x = 50 + i * 60
-        const h = (count / maxDayCount) * 160
-        const y = 190 - h
-        const short = day.slice(5)
-        return `<rect x="${x}" y="${y}" width="32" height="${h}" class="bar-rect"/><text x="${x + 16}" y="203" class="bar-label">${esc(short)}</text><text x="${x + 16}" y="${y - 5}" class="bar-val">${count}</text>`
-      }).join("\n      ")}
-    </svg>
+    </div>
   </div>` : ""}
 
   <h2>Recent Sessions</h2>
